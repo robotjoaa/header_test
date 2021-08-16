@@ -1,0 +1,22 @@
+  {
+  "ddpg_parameters": {
+    "gamma": 0.99,
+    "batch_size": 256,
+    "buffer_size": 10000,
+    "actor_lr": 0.0001,
+    "critic_lr": 0.001,
+    "grad_norm_clip": 10,
+    "dec_exploration": 5000
+  },
+  "agent_parameters": {
+    "num_layers": 2,
+    "hidden_dim": 256
+  },
+  "sim_parameters": {
+    "algorithm": "ddpg",
+    "reward_type": "reward_binary",
+    "frame_skip": 10,
+    "load": false,
+    "play": false
+  }
+}
