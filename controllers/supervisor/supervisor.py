@@ -353,14 +353,19 @@ class GameSupervisor(Supervisor):
                 reward -= 1
         
             # if ball had hit the head 
-            if self.robot[self.constants.TEAM_RED][1]['touch'] == True and self.first_touch : 
+            if self.robot[self.constants.TEAM_RED][1]['touch'] == True and self.first_touch: 
                 self.first_touch = False
-                reward += 5 
+                if self.get_robot_posture(self.constants.TEAM_RED,1)[2] > 0.1 : 
+                    reward += 10
+                else :    
+                    reward += 2
+
             else : 
                 reward -= 1 
 
             # if only jumped once (reward on player)
 
+            # reward if f2 crossed (reward on player)
 
             # should not be close to f2
             f2_pos = self.get_robot_posture(team, 2)
@@ -369,11 +374,19 @@ class GameSupervisor(Supervisor):
             dist_f2 = math.sqrt(dx_f2*dx_f2+dy_f2*dy_f2)
             if dist_f2 < self.constants.PENALTY_AREA_WIDTH/2 : 
                 reward -= 3
-            
+
+            # should not be in goal area 
+            if (self.constants.FIELD_LENGTH/2  - self.constants.GOAL_AREA_DEPTH <= pos[0] and pos[0] <= self.constants.FIELD_LENGTH/2 and
+            -self.constants.GOAL_AREA_WIDTH/2 <= pos[1] and pos[1] <= self.constants.GOAL_AREA_WIDTH/2) : 
+                reward -= 2
+            else :
+                reward += 0
+
             if pre_distance_ball - distance_ball > 0.01:
                 reward += 0
             else:
                 reward += -1
+
             if ball[0] > self.constants.FIELD_LENGTH / 2 and abs(ball[1]) < self.constants.GOAL_WIDTH / 2 and abs(ball[2]) < 0.5:
                 reward += 10
         elif type == 'sparse':
@@ -2224,7 +2237,9 @@ class GameSupervisor(Supervisor):
             ball_x = self.ball_position[0]
             ball_y = self.ball_position[1]
             ball_z = self.ball_position[2]
-            if ball_x > self.constants.FIELD_LENGTH / 2 and abs(ball_y) < self.constants.GOAL_WIDTH / 2 and abs(ball_z) < 0.5:
+            
+            if ball_x > self.constants.FIELD_LENGTH / 2 and abs(ball_y) < self.constants.GOAL_WIDTH / 2 and abs(ball_z) < 0.5 or \
+            (self.robot[self.constants.TEAM_RED][1]['touch'] == True and self.get_robot_posture(self.constants.TEAM_RED,1)[2] > 0.1) :
                 if repeat : 
                     self.log_success.update(True)
                     self.save_training_log(self.training_log, self.log_success, self.log_reward)

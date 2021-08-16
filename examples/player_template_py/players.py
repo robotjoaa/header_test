@@ -146,6 +146,7 @@ class Forward_1:
         self.save_png_interval = 2500
         self.i = 1
         self.jump_count = 0 
+        self.first_cross = True
     
     def move(self, robot_id, idx, idx_opp, defense_angle, attack_angle, cur_posture, cur_posture_opp, prev_posture, prev_posture_opp, prev_ball, cur_ball, predicted_ball,frame,target=[0,0]):
         '''
@@ -162,8 +163,13 @@ class Forward_1:
             self.reward = self.frame.reward_continuous
         elif (self.reward_type == 'reward_binary'):
             self.reward = self.frame.reward_binary
-            if self.jump_count != 1: 
+            if self.jump_count > 2: 
                 self.reward -= 1
+
+            if self.team_manager.cross_matrix[2][1] > 0 and self.first_cross : 
+                self.first_cross = False
+                self.reward += 3
+            
         elif (self.reward_type == 'reward_sparse'):
             self.reward = self.frame.reward_sparse
         else:
