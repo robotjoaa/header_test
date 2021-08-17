@@ -144,7 +144,8 @@ class DDPG(object):
         if not self.play:
             if np.random.rand() <= self.epsilon:
                 for i in range(self.nb_actions):
-                    action[i] = action[i] + np.random.normal(loc=0.0, scale=0.3)
+                    action[i] = action[i] + np.random.normal(loc=0.0, scale=0.7)
+                    # scale increased from 0.3 to 0.7
 
         if not self.play:
             if self.epsilon < 0.05:

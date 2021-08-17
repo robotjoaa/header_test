@@ -325,7 +325,7 @@ class GameSupervisor(Supervisor):
 
         dx_ball_head = pos[0] - ball[0]
         dy_ball_head = pos[1] - ball[1]
-        dz_ball_head = (pos[2]+0.85) - ball[2]
+        dz_ball_head = (pos[2]+0.42) - ball[2]
         distance_ball_head = math.sqrt(dx_ball_head*dx_ball_head + dy_ball_head*dy_ball_head + dz_ball_head*dz_ball_head)
         reward = 0
         if type == 'continuous':
@@ -335,7 +335,7 @@ class GameSupervisor(Supervisor):
                 reward += 10
         elif type == 'binary':
             # if distance between ball and head decreased
-            if distance_ball_head < 0.3 :
+            if distance_ball_head < 0.5 :
                 reward = 0
             else:
                 reward = -1
@@ -344,7 +344,7 @@ class GameSupervisor(Supervisor):
             dx_ball = self.constants.FIELD_LENGTH/2 - self.pre_ball[0]
             dy_ball = 0 - self.pre_ball[1]
             pre_distance_ball = math.sqrt(dx_ball*dx_ball + dy_ball*dy_ball)
-            
+            '''
             # if robot in penalty area
             if (self.constants.FIELD_LENGTH/2  - self.constants.PENALTY_AREA_DEPTH <= pos[0] and pos[0] <= self.constants.FIELD_LENGTH/2 and
             -self.constants.PENALTY_AREA_WIDTH/2 <= pos[1] and pos[1] <= self.constants.PENALTY_AREA_WIDTH/2) : 
@@ -389,6 +389,7 @@ class GameSupervisor(Supervisor):
 
             if ball[0] > self.constants.FIELD_LENGTH / 2 and abs(ball[1]) < self.constants.GOAL_WIDTH / 2 and abs(ball[2]) < 0.5:
                 reward += 10
+            '''
         elif type == 'sparse':
             if ball[0] > self.constants.FIELD_LENGTH / 2 and abs(ball[1]) < self.constants.GOAL_WIDTH / 2 and abs(ball[2]) < 0.5:
                 reward = 0

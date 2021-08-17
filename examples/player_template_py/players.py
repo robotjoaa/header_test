@@ -159,16 +159,19 @@ class Forward_1:
         
         self.frame = frame
         self.state = self.frame.state
+        self.state.append(self.team_manager.cross_matrix[2][1])
         if (self.reward_type == 'reward_continuous'):
             self.reward = self.frame.reward_continuous
         elif (self.reward_type == 'reward_binary'):
             self.reward = self.frame.reward_binary
+            '''
             if self.jump_count > 2: 
                 self.reward -= 1
 
             if self.team_manager.cross_matrix[2][1] > 0 and self.first_cross : 
                 self.first_cross = False
                 self.reward += 3
+            '''
             
         elif (self.reward_type == 'reward_sparse'):
             self.reward = self.frame.reward_sparse
@@ -212,10 +215,15 @@ class Forward_1:
             self.trainer.save_checkpoint(self.i)
         
         if self.action[2] > 0 and self.team_manager.cross_matrix[2][1] > 0 :
-            speeds = self.action_control.jump(8.5)
-            self.jump_count += 1
-        else:
-            speeds = self.action_control.go_to(self.action[0]*self.field[0]/2, self.action[1]*self.field[1]/2)
+            #speeds = self.action_control.jump(8.5)
+            #self.jump_count += 1
+            predicted_time = helper.predict_header_time(cur_ball, prev_ball)
+            ball_predicted = helper.predict_ball(cur_ball, prev_ball, predicted_time)
+            speeds = self.action_control.header(ball_predicted, predicted_time)
+        elif self.action[2] > 0:
+            speeds = self.action_control.turn_to(self.field[0]/2 - self.penalty_area[0]/2 - self.action[0]*self.penalty_area[0]/2, self.action[1]*self.penalty_area[1]/2)
+        else : 
+            speeds = self.action_control.go_to(self.field[0]/2 - self.penalty_area[0]/2 - self.action[0]*self.penalty_area[0]/2, self.action[1]*self.penalty_area[1]/2)
         
         '''
         if cur_ball[Z] > 0.3: 
@@ -269,6 +277,9 @@ class Forward_2:
             else:
                 speeds = self.action.STOP()
         else:
-            speeds = self.action.go_to(cur_ball[X], cur_ball[Y])
+            if cur_ball[Y] > -1 :
+                speeds = self.action.STOP()
+            else : 
+                speeds = self.action.go_to(cur_ball[X], cur_ball[Y])
 
         return speeds

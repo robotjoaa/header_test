@@ -50,7 +50,7 @@ class Player(Participant):
         self.params = Parameters()
         #self.frame = Frame()
         self.i = 1 
-        self.state_size = info['state_size']
+        self.state_size = info['state_size'] + 1 #cross matrix added to state
         self.action_size = info['action_size']
 
         self.number_of_agents = 1
@@ -98,7 +98,7 @@ class Player(Participant):
             self.previous_frame = frame
             self.get_coord(frame)
             self.previous_ball = self.cur_ball
-            self.state_size = frame.state_size
+            self.state_size = frame.state_size + 1
 
         self.get_coord(frame)
 
