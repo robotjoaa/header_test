@@ -116,7 +116,11 @@ class Player(Participant):
        
         #helper.printConsole(str([i[TOUCH] for i in self.cur_posture]))
         #helper.printConsole(str([i[TOUCH] for i in self.cur_posture_opp]))
-        
+        if frame.reset_reason == 10 : #Game.EPISODE_END
+            self.MANAGER.reset_matrix(True, True)
+            self.F2.crossed = False
+            #helper.printConsole("episode end")
+
         self.MANAGER.update_matrix(self.cur_posture, self.previous_posture, self.cur_posture_opp, self.previous_posture_opp)
     
         speeds_gk = self.GK.move(self.gk_index, 

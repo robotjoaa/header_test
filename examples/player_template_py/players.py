@@ -131,6 +131,7 @@ class Forward_1:
         self.previous_reward = 0
 
         self.load = params.play
+        #self.load = True
         self.play = params.play
         self.frame_skip = params.frame_skip
 
@@ -257,6 +258,7 @@ class Forward_2:
         self.f1_index = 1
         self.f2_index = 2
         self.team_manager = team_manager
+        self.crossed = False
 
     def move(self, robot_id, idx, idx_opp, defense_angle, attack_angle, cur_posture, cur_posture_opp, prev_posture, prev_posture_opp, prev_ball, cur_ball, predicted_ball, target=[0,0]):
 
@@ -265,8 +267,17 @@ class Forward_2:
         robot_to_goal = helper.relative_distance(self.field[X]/2, cur_posture[robot_id][X], 0, cur_posture[robot_id][Y])        
         self.action.update_state(cur_posture, prev_posture, cur_ball, prev_ball)
         #speeds = self.action.STOP()
+        #helper.printConsole(str(self.team_manager.cross_matrix))
+        if self.team_manager.cross_matrix[2][1] == 1 :
+            self.crossed = True
+        
+        if self.crossed : 
+            #helper.printConsole("finished crossing")
+            speeds = self.action.STOP()
+            return speeds
 
         if cur_posture[robot_id][BALL_POSSESSION]:
+            '''
             if helper.robot_is_opp_penalty(cur_posture[self.f1_index], self.field, self.penalty_area):
                 cross_target = helper.cross_target(cur_posture[self.f1_index])
                 if self.action.is_cross_to_possible(cross_target[X], cross_target[Y], cross_target[Z], self.team_manager.cross_matrix):
@@ -276,6 +287,14 @@ class Forward_2:
                     speeds = self.action.go_to(cur_posture[self.f1_index][X], cur_posture[self.f1_index][Y])
             else:
                 speeds = self.action.STOP()
+            '''
+            #cross_target = helper.cross_target(cur_posture[self.f1_index])
+            cross_target = [4.5, 0.5, 0.85]
+            if self.action.is_cross_to_possible(cross_target[X], cross_target[Y], cross_target[Z], self.team_manager.cross_matrix) : 
+                speeds = self.action.cross_to(cross_target[X], cross_target[Y], cross_target[Z], self.team_manager.cross_matrix)
+            else:
+                speeds = self.action.go_to(cur_posture[self.f1_index][X], cur_posture[self.f1_index][Y])
+                #speeds = self.action.STOP()
         else:
             if cur_ball[Y] > -1 :
                 speeds = self.action.STOP()

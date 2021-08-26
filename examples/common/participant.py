@@ -98,7 +98,8 @@ class Participant():
             frame.reward_binary = f['reward_binary']
         if 'reward_sparse' in f:
             frame.reward_sparse = f['reward_sparse']
-        
+        if 'reset_reason' in f:
+            frame.reset_reason = f['reset_reason']
         return frame
 
     def set_speeds(self, speeds):

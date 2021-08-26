@@ -13,6 +13,7 @@ import sys
 import time
 import collections
 import numpy as np
+from numpy.lib.polynomial import _polyder_dispatcher
 sys.path.append(os.path.join(os.path.dirname(__file__), '../submodules'))
 
 from controller import Supervisor
@@ -277,6 +278,7 @@ class GameSupervisor(Supervisor):
         #target = [self.target[0], -self.target[2], self.target[1]]
         dx = ball[0] - pos[0]
         dy = ball[1] - pos[1]
+        dz = ball[2] - (pos[2] + 0.42)
         desired_th = math.atan2(dy, dx)
         if team == self.constants.TEAM_RED:
             th = pos[3]
@@ -290,6 +292,7 @@ class GameSupervisor(Supervisor):
         # distance from ball to opponent goal
         dx_ball = self.constants.FIELD_LENGTH/2 - ball[0]
         dy_ball = 0 - ball[1]
+        dz_ball = ball[2]
         d_th_robot2goal = math.atan2(self.constants.FIELD_LENGTH/2 - pos[0], 0 - pos[1]) - th
         '''
         return [round(dx/self.constants.FIELD_LENGTH, 2), 
@@ -304,9 +307,11 @@ class GameSupervisor(Supervisor):
         '''
         return [round(dx/self.constants.FIELD_LENGTH, 2), 
                 round(dy/self.constants.FIELD_WIDTH, 2), 
+                round(dz,2),
                 round(d_th/self.constants.PI, 2),
                 round(dx_ball/self.constants.FIELD_LENGTH, 2), 
                 round(dy_ball/self.constants.FIELD_WIDTH, 2), 
+                round(dz_ball,2),
                 round(d_th_robot2goal/self.constants.PI, 2)]
 
 
@@ -320,13 +325,18 @@ class GameSupervisor(Supervisor):
         #distance = math.sqrt(dx*dx + dy*dy)
         # distance ball 2 goal
         dx_ball = self.constants.FIELD_LENGTH/2 - ball[0]
-        dy_ball = 0 - ball[1]
-        distance_ball = math.sqrt(dx_ball*dx_ball + dy_ball*dy_ball)
+        #dy_ball = 0 - ball[1]
+        #distance_ball = math.sqrt(dx_ball*dx_ball + dy_ball*dy_ball)
+        distance_ball = dx_ball
 
         dx_ball_head = pos[0] - ball[0]
         dy_ball_head = pos[1] - ball[1]
         dz_ball_head = (pos[2]+0.42) - ball[2]
         distance_ball_head = math.sqrt(dx_ball_head*dx_ball_head + dy_ball_head*dy_ball_head + dz_ball_head*dz_ball_head)
+
+        if team == self.constants.TEAM_RED and id == 1 :
+            self.log_head.update_iter(distance_ball_head, pos[2])
+
         reward = 0
         if type == 'continuous':
             #reward = math.exp(-1*distance) - 1
@@ -335,34 +345,52 @@ class GameSupervisor(Supervisor):
                 reward += 10
         elif type == 'binary':
             # if distance between ball and head decreased
-            if distance_ball_head < 0.5 :
+            if distance_ball_head < 0.3 :
                 reward = 0
             else:
                 reward = -1
 
             
             dx_ball = self.constants.FIELD_LENGTH/2 - self.pre_ball[0]
-            dy_ball = 0 - self.pre_ball[1]
-            pre_distance_ball = math.sqrt(dx_ball*dx_ball + dy_ball*dy_ball)
-            '''
+            #dy_ball = 0 - self.pre_ball[1]
+            #pre_distance_ball = math.sqrt(dx_ball*dx_ball + dy_ball*dy_ball)
+            pre_distance_ball = dx_ball
+            
             # if robot in penalty area
             if (self.constants.FIELD_LENGTH/2  - self.constants.PENALTY_AREA_DEPTH <= pos[0] and pos[0] <= self.constants.FIELD_LENGTH/2 and
-            -self.constants.PENALTY_AREA_WIDTH/2 <= pos[1] and pos[1] <= self.constants.PENALTY_AREA_WIDTH/2) : 
-                reward += 0 
-            else :
+            -self.constants.PENALTY_AREA_WIDTH/2 <= pos[1] and pos[1] <= self.constants.PENALTY_AREA_WIDTH/2) and self.first_touch: 
                 reward -= 1
-        
+            else :
+                reward += 0
+            
+
             # if ball had hit the head 
-            if self.robot[self.constants.TEAM_RED][1]['touch'] == True and self.first_touch: 
+            if not self.first_touch :
+                if pre_distance_ball > distance_ball :
+                    reward += 0.5    
+                else : 
+                    reward += 0
+            else:
+                reward += -1
+
+            #if self.robot[self.constants.TEAM_RED][1]['touch'] == True and self.get_robot_posture(self.constants.TEAM_RED,1)[2] > 0.1 and self.first_touch: 
+            #    self.first_touch = False
+            if self.robot[self.constants.TEAM_RED][1]['touch'] == True and self.first_touch and pos[2] > 0.2: 
                 self.first_touch = False
+                reward += 10
+            
+            if ball[0] > self.constants.FIELD_LENGTH / 2 and abs(ball[1]) < self.constants.GOAL_WIDTH / 2 and abs(ball[2]) < 0.5 and not self.first_touch:
+                reward += 10
+            '''
                 if self.get_robot_posture(self.constants.TEAM_RED,1)[2] > 0.1 : 
                     reward += 10
                 else :    
                     reward += 2
-
+                
             else : 
                 reward -= 1 
-
+            '''
+            '''
             # if only jumped once (reward on player)
 
             # reward if f2 crossed (reward on player)
@@ -387,8 +415,7 @@ class GameSupervisor(Supervisor):
             else:
                 reward += -1
 
-            if ball[0] > self.constants.FIELD_LENGTH / 2 and abs(ball[1]) < self.constants.GOAL_WIDTH / 2 and abs(ball[2]) < 0.5:
-                reward += 10
+            
             '''
         elif type == 'sparse':
             if ball[0] > self.constants.FIELD_LENGTH / 2 and abs(ball[1]) < self.constants.GOAL_WIDTH / 2 and abs(ball[2]) < 0.5:
@@ -449,6 +476,7 @@ class GameSupervisor(Supervisor):
             frame['reward_sparse'] = self.get_reward(team, 1, 'sparse')
         #self.pre_pos[team][0] = self.get_robot_posture(team, 0)
         self.pre_ball = self.ball_position
+        frame['reset_reason'] = reset_reason
         return frame
 
     def robot_in_field(self, team, id):
@@ -1970,7 +1998,7 @@ class GameSupervisor(Supervisor):
         with open('../../results/results.json', 'w') as outfile:
             json.dump(results, outfile)
 
-    def save_training_log(self, training_log, log_success, log_reward):
+    def save_training_log(self, training_log, log_success, log_reward, log_head):
         time_info = time.localtime()
         timestamp = '{:04d}-{:02d}-{:02d}T{:02d}_{:02d}_{:02d}'.format(
                             # [<year>-<month>-<day>T<hour>_<minute>_<seconds>]
@@ -1981,11 +2009,15 @@ class GameSupervisor(Supervisor):
         training_log['training']['training'] = True
         training_log['training']['success_frame'] = log_success.logger_success.frame
         training_log['training']['success_value'] = log_success.logger_success.value
-        training_log['training']['reward_frame'] = log_reward.logger_reward.frame
-        training_log['training']['reward_value'] = log_reward.logger_reward.value
-        
+        #training_log['training']['reward_frame'] = log_reward.logger_reward.frame
+        #training_log['training']['reward_value'] = log_reward.logger_reward.value
+        training_log['training']['dist_frame'] = log_head.logger_dist.frame
+        training_log['training']['dist_value_min_dist'] = [i[1] for i in log_head.logger_dist.value] # only minimum
+        training_log['training']['dist_value_max_z'] = [i[2] for i in log_head.logger_dist.value]
+
         with open('../../results/training.json', 'w') as outfile:
             json.dump(training_log, outfile)
+
 
 
     def run(self):
@@ -2022,6 +2054,7 @@ class GameSupervisor(Supervisor):
 
         self.log_success = logger.Avg_Success()
         self.log_reward = logger.Avg_Reward()
+        self.log_head = logger.Avg_Distance()
 
         self.multi_view = False
         if config['tool']:
@@ -2096,7 +2129,7 @@ class GameSupervisor(Supervisor):
             info['team_info'] = [[['name_a', name], ['rating', rating]], [['name_b', name_op], ['rating', rating_op]]]
             info['key'] = random_string(self.constants.KEY_LENGTH)
             ## should be changed
-            info['state_size'] = 6
+            info['state_size'] = 8
             info['action_size'] = 3
             self.role_info[team] = info
 
@@ -2180,9 +2213,11 @@ class GameSupervisor(Supervisor):
             if self.time >= self.game_time:
                 if repeat : 
                     self.log_success.update(False)
-                    self.save_training_log(self.training_log, self.log_success, self.log_reward)
+                    self.save_training_log(self.training_log, self.log_success, self.log_reward, self.log_head)
                     self.setLabel(99, 'FAIL', 0.43, 0.4, 0.3, 0xcc0000, 0, 'Impact')
                     self.publish_current_frame(Game.EPISODE_END)
+                    self.log_head.update_epi(True)
+                    print("Distance Updated")
                     self.reset_reason = Game.EPISODE_END
                     self.stop_robots()
                     if self.step(self.constants.WAIT_END_MS) == -1:
@@ -2239,11 +2274,12 @@ class GameSupervisor(Supervisor):
             ball_y = self.ball_position[1]
             ball_z = self.ball_position[2]
             
-            if ball_x > self.constants.FIELD_LENGTH / 2 and abs(ball_y) < self.constants.GOAL_WIDTH / 2 and abs(ball_z) < 0.5 or \
-            (self.robot[self.constants.TEAM_RED][1]['touch'] == True and self.get_robot_posture(self.constants.TEAM_RED,1)[2] > 0.1) :
+            if ball_x > self.constants.FIELD_LENGTH / 2 and abs(ball_y) < self.constants.GOAL_WIDTH / 2 and abs(ball_z) < 0.5 and not self.first_touch :
+            #(self.robot[self.constants.TEAM_RED][1]['touch'] == True and self.get_robot_posture(self.constants.TEAM_RED,1)[2] > 0.1) :
                 if repeat : 
                     self.log_success.update(True)
-                    self.save_training_log(self.training_log, self.log_success, self.log_reward)
+                    
+                    self.save_training_log(self.training_log, self.log_success, self.log_reward, self.log_head)
                     '''
                     if self.log_success.get_last_success() > 0.9:
                         self.save_results(True, True, results)
@@ -2256,6 +2292,8 @@ class GameSupervisor(Supervisor):
                     '''
                     self.setLabel(99, 'SUCCESS', 0.35, 0.4, 0.3, 0xcc0000, 0, 'Impact')
                     self.publish_current_frame(Game.EPISODE_END)
+                    self.log_head.update_epi(True)
+                    print("Distance Plotted")
                     self.reset_reason = Game.EPISODE_END
                     self.stop_robots()
                     if self.step(self.constants.WAIT_END_MS) == -1:

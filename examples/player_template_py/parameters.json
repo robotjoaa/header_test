@@ -6,10 +6,10 @@
     "actor_lr": 0.0001,
     "critic_lr": 0.001,
     "grad_norm_clip": 10,
-    "dec_exploration": 5000
+    "dec_exploration": 20000
   },
   "agent_parameters": {
-    "num_layers": 2,
+    "num_layers": 3,
     "hidden_dim": 256
   },
   "sim_parameters": {
